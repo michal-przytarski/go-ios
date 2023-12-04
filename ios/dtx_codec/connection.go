@@ -97,7 +97,7 @@ func notifyOfPublishedCapabilities(msg Message) {
 }
 
 // NewConnection connects and starts reading from a Dtx based service on the device
-func NewConnection(device ios.DeviceEntry, serviceName string) (*Connection, error) {
+func NewConnection(device ios.DeviceEntry, serviceName string, onClosed func()) (*Connection, error) {
 	conn, err := ios.ConnectToService(device, serviceName)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func NewConnection(device ios.DeviceEntry, serviceName string) (*Connection, err
 		timeout:           5 * time.Second,
 	}
 	dtxConnection.globalChannel = &globalChannel
-	go reader(dtxConnection)
+	go reader(dtxConnection, onClosed)
 
 	return dtxConnection, nil
 }
@@ -129,7 +129,7 @@ func (dtxConn *Connection) Send(message []byte) error {
 }
 
 // reader reads messages from the byte stream and dispatches them to the right channel when they are decoded.
-func reader(dtxConn *Connection) {
+func reader(dtxConn *Connection, onClosed func()) {
 	for {
 		reader := dtxConn.deviceConnection.Reader()
 		msg, err := ReadMessage(reader)
@@ -137,6 +137,9 @@ func reader(dtxConn *Connection) {
 			errText := err.Error()
 			if err == io.EOF || strings.Contains(errText, "use of closed network") {
 				log.Debug("DTX Connection with EOF")
+				if onClosed != nil {
+					onClosed()
+				}
 				return
 			}
 			log.Errorf("error reading dtx connection %+v", err)

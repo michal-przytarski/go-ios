@@ -980,16 +980,23 @@ func runWdaCommand(device ios.DeviceEntry, arguments docopt.Opts) bool {
 			return true
 		}
 		log.WithFields(log.Fields{"bundleid": bundleID, "testbundleid": testbundleID, "xctestconfig": xctestconfig}).Info("Running wda")
+		ctx, cancel := context.WithCancel(context.Background())
 		go func() {
-			err := testmanagerd.RunXCUIWithBundleIdsCtx(context.Background(), bundleID, testbundleID, xctestconfig, device, wdaargs, wdaenv)
+			err := testmanagerd.RunXCUIWithBundleIdsCtx(ctx, bundleID, testbundleID, xctestconfig, device, wdaargs, wdaenv)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Fatal("Failed running WDA")
 			}
+			cancel()
 		}()
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		signal := <-c
-		log.Infof("os signal:%d received, closing..", signal)
+
+		select {
+		case <-ctx.Done():
+			log.Debug("WDA context done")
+		case signal := <-c:
+			log.Debugf("os signal:%d received, closing...", signal)
+		}
 
 		err := testmanagerd.CloseXCUITestRunner()
 		if err != nil {

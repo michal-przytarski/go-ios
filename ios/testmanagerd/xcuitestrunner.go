@@ -295,7 +295,11 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 	defer conn.Close()
 	ideDaemonProxy := newDtxProxyWithConfig(conn, testConfig)
 
-	conn2, err := dtx.NewConnection(device, testmanagerdiOS14)
+	var cancelCtx context.CancelFunc = nil
+	if ctx != nil {
+		ctx, cancelCtx = context.WithCancel(ctx)
+	}
+	conn2, err := dtx.NewConnection(device, testmanagerdiOS14, cancelCtx)
 	if err != nil {
 		return err
 	}
@@ -344,17 +348,17 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 	}
 
 	if ctx != nil {
-		select {
-		case <-ctx.Done():
-			log.Infof("Killing WebDriverAgent with pid %d ...", pid)
-			err = pControl.KillProcess(pid)
-			if err != nil {
-				return err
-			}
-			log.Info("WDA killed with success")
+		log.Debug("Context provided, waiting for cancel")
+		<-ctx.Done()
+		log.Infof("Killing WebDriverAgent with pid %d ...", pid)
+		err = pControl.KillProcess(pid)
+		if err != nil {
+			return err
 		}
+		log.Info("WDA killed with success")
 		return nil
 	}
+	log.Debug("No context provided, waiting for closeChan")
 
 	<-closeChan
 	log.Infof("Killing UITest with pid %d ...", pid)
@@ -387,11 +391,12 @@ func RunXCUIWithBundleIdsCtx(
 		return RunXCUIWithBundleIds11Ctx(ctx, bundleID, testRunnerBundleID, xctestConfigFileName, device, wdaargs, wdaenv)
 	}
 
-	conn, err := dtx.NewConnection(device, testmanagerdiOS14)
+	wdaCtx, cancel := context.WithCancel(ctx)
+	conn, err := dtx.NewConnection(device, testmanagerdiOS14, cancel)
 	if err != nil {
 		return err
 	}
-	return runXUITestWithBundleIdsXcode12Ctx(ctx, bundleID, testRunnerBundleID, xctestConfigFileName, device, conn, wdaargs, wdaenv)
+	return runXUITestWithBundleIdsXcode12Ctx(wdaCtx, bundleID, testRunnerBundleID, xctestConfigFileName, device, conn, wdaargs, wdaenv)
 }
 
 func CloseXCUITestRunner() error {
