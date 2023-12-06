@@ -299,7 +299,7 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 	if ctx != nil {
 		ctx, cancelCtx = context.WithCancel(ctx)
 	}
-	conn2, err := dtx.NewConnection(device, testmanagerdiOS14, cancelCtx)
+	conn2, err := dtx.NewConnection(device, testmanagerdiOS14, dtx.WithConnectionBreakdownCallback(cancelCtx))
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func RunXCUIWithBundleIdsCtx(
 	}
 
 	wdaCtx, cancel := context.WithCancel(ctx)
-	conn, err := dtx.NewConnection(device, testmanagerdiOS14, cancel)
+	conn, err := dtx.NewConnection(device, testmanagerdiOS14, dtx.WithConnectionBreakdownCallback(cancel))
 	if err != nil {
 		return err
 	}

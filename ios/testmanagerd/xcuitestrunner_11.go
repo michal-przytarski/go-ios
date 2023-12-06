@@ -29,14 +29,14 @@ func RunXCUIWithBundleIds11Ctx(
 	if ctx != nil {
 		ctx, cancelCtx = context.WithCancel(ctx)
 	}
-	conn, err := dtx.NewConnection(device, testmanagerd, cancelCtx)
+	conn, err := dtx.NewConnection(device, testmanagerd, dtx.WithConnectionBreakdownCallback(cancelCtx))
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 	ideDaemonProxy := newDtxProxyWithConfig(conn, testConfig)
 
-	conn2, err := dtx.NewConnection(device, testmanagerd, cancelCtx)
+	conn2, err := dtx.NewConnection(device, testmanagerd, dtx.WithConnectionBreakdownCallback(cancelCtx))
 	if err != nil {
 		return err
 	}
