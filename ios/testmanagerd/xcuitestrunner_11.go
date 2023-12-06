@@ -25,14 +25,18 @@ func RunXCUIWithBundleIds11Ctx(
 		return err
 	}
 	log.Debugf("test session setup ok")
-	conn, err := dtx.NewConnection(device, testmanagerd, nil)
+	var cancelCtx context.CancelFunc = nil
+	if ctx != nil {
+		ctx, cancelCtx = context.WithCancel(ctx)
+	}
+	conn, err := dtx.NewConnection(device, testmanagerd, cancelCtx)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 	ideDaemonProxy := newDtxProxyWithConfig(conn, testConfig)
 
-	conn2, err := dtx.NewConnection(device, testmanagerd, nil)
+	conn2, err := dtx.NewConnection(device, testmanagerd, cancelCtx)
 	if err != nil {
 		return err
 	}
@@ -72,18 +76,17 @@ func RunXCUIWithBundleIds11Ctx(
 		log.Error(err)
 	}
 	if ctx != nil {
-		select {
-		case <-ctx.Done():
-			log.Infof("Killing WebDriverAgent with pid %d ...", pid)
-			err = pControl.KillProcess(pid)
-			if err != nil {
-				return err
-			}
-			log.Info("WDA killed with success")
+		log.Debug("Context provided, waiting for cancel")
+		<-ctx.Done()
+		log.Infof("Context done, killing WebDriverAgent with pid %d ...", pid)
+		err = pControl.KillProcess(pid)
+		if err != nil {
+			return err
 		}
+		log.Info("WDA killed with success")
 		return nil
 	}
-	log.Debugf("done starting test")
+	log.Debug("No context provided, waiting for closeChan")
 	<-closeChan
 	log.Infof("Killing WebDriverAgent with pid %d ...", pid)
 	err = pControl.KillProcess(pid)
