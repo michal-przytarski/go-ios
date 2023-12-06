@@ -350,7 +350,7 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 	if ctx != nil {
 		log.Debug("Context provided, waiting for cancel")
 		<-ctx.Done()
-		log.Infof("Killing WebDriverAgent with pid %d ...", pid)
+		log.Infof("Context done, killing WebDriverAgent with pid %d ...", pid)
 		err = pControl.KillProcess(pid)
 		if err != nil {
 			return err
