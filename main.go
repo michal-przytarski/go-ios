@@ -993,15 +993,15 @@ func runWdaCommand(device ios.DeviceEntry, arguments docopt.Opts) bool {
 
 		select {
 		case <-ctx.Done():
-			log.Debug("WDA context done")
-		case signal := <-c:
-			log.Debugf("os signal:%d received, closing...", signal)
-		}
-
-		err := testmanagerd.CloseXCUITestRunner()
-		if err != nil {
-			log.Error("Failed closing wda-testrunner")
+			log.Error("WDA process ended unexpectedly")
 			os.Exit(1)
+		case signal := <-c:
+			log.Infof("os signal:%d received, closing...", signal)
+			err := testmanagerd.CloseXCUITestRunner()
+			if err != nil {
+				log.Error("Failed closing wda-testrunner")
+				os.Exit(1)
+			}
 		}
 		log.Info("Done Closing")
 	}
