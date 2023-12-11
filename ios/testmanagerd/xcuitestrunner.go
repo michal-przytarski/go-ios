@@ -344,13 +344,11 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 		return err
 	}
 
+	closeChanUsed := false
 	select {
 	case <-ctx.Done():
 	case <-closeChan:
-		defer func() {
-			var signal interface{}
-			closedChan <- signal
-		}()
+		closeChanUsed = true
 	}
 	log.Infof("Killing WebDriverAgent with pid %d ...", pid)
 	err = pControl.KillProcess(pid)
@@ -358,6 +356,11 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 		return err
 	}
 	log.Info("WDA killed successfully")
+
+	if closeChanUsed {
+		var signal interface{}
+		closedChan <- signal
+	}
 	return nil
 }
 

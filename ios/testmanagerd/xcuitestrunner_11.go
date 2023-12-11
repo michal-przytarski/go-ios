@@ -72,13 +72,12 @@ func RunXCUIWithBundleIds11Ctx(
 	if err != nil {
 		log.Error(err)
 	}
+
+	closeChanUsed := false
 	select {
 	case <-ctx.Done():
 	case <-closeChan:
-		defer func() {
-			var signal interface{}
-			closedChan <- signal
-		}()
+		closeChanUsed = true
 	}
 	log.Infof("Killing WebDriverAgent with pid %d ...", pid)
 	err = pControl.KillProcess(pid)
@@ -86,6 +85,11 @@ func RunXCUIWithBundleIds11Ctx(
 		return err
 	}
 	log.Info("WDA killed successfully")
+
+	if closeChanUsed {
+		var signal interface{}
+		closedChan <- signal
+	}
 	return nil
 }
 
