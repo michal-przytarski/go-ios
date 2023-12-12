@@ -25,14 +25,15 @@ func RunXCUIWithBundleIds11Ctx(
 		return err
 	}
 	log.Debugf("test session setup ok")
-	conn, err := dtx.NewConnection(device, testmanagerd)
+	ctx, cancelCtx := context.WithCancel(ctx)
+	conn, err := dtx.NewConnection(device, testmanagerd, dtx.WithConnectionBreakdownCallback(cancelCtx))
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 	ideDaemonProxy := newDtxProxyWithConfig(conn, testConfig)
 
-	conn2, err := dtx.NewConnection(device, testmanagerd)
+	conn2, err := dtx.NewConnection(device, testmanagerd, dtx.WithConnectionBreakdownCallback(cancelCtx))
 	if err != nil {
 		return err
 	}
@@ -71,28 +72,24 @@ func RunXCUIWithBundleIds11Ctx(
 	if err != nil {
 		log.Error(err)
 	}
-	if ctx != nil {
-		select {
-		case <-ctx.Done():
-			log.Infof("Killing WebDriverAgent with pid %d ...", pid)
-			err = pControl.KillProcess(pid)
-			if err != nil {
-				return err
-			}
-			log.Info("WDA killed with success")
-		}
-		return nil
+
+	closeChanUsed := false
+	select {
+	case <-ctx.Done():
+	case <-closeChan:
+		closeChanUsed = true
 	}
-	log.Debugf("done starting test")
-	<-closeChan
 	log.Infof("Killing WebDriverAgent with pid %d ...", pid)
 	err = pControl.KillProcess(pid)
 	if err != nil {
 		return err
 	}
-	log.Info("WDA killed with success")
-	var signal interface{}
-	closedChan <- signal
+	log.Info("WDA killed successfully")
+
+	if closeChanUsed {
+		var signal interface{}
+		closedChan <- signal
+	}
 	return nil
 }
 
