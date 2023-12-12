@@ -277,7 +277,7 @@ func RunXCUITest(bundleID string, testRunnerBundleID string, xctestConfigName st
 		xctestConfigName = info.targetAppBundleName + "UITests.xctest"
 	}
 
-	return RunXCUIWithBundleIdsCtx(nil, bundleID, testRunnerBundleID, xctestConfigName, device, nil, env)
+	return RunXCUIWithBundleIdsCtx(context.TODO(), bundleID, testRunnerBundleID, xctestConfigName, device, nil, env)
 }
 
 var (
@@ -295,7 +295,8 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 	defer conn.Close()
 	ideDaemonProxy := newDtxProxyWithConfig(conn, testConfig)
 
-	conn2, err := dtx.NewConnection(device, testmanagerdiOS14)
+	ctx, cancelCtx := context.WithCancel(ctx)
+	conn2, err := dtx.NewConnection(device, testmanagerdiOS14, dtx.WithConnectionBreakdownCallback(cancelCtx))
 	if err != nil {
 		return err
 	}
@@ -343,28 +344,23 @@ func runXUITestWithBundleIdsXcode12Ctx(ctx context.Context, bundleID string, tes
 		return err
 	}
 
-	if ctx != nil {
-		select {
-		case <-ctx.Done():
-			log.Infof("Killing WebDriverAgent with pid %d ...", pid)
-			err = pControl.KillProcess(pid)
-			if err != nil {
-				return err
-			}
-			log.Info("WDA killed with success")
-		}
-		return nil
+	closeChanUsed := false
+	select {
+	case <-ctx.Done():
+	case <-closeChan:
+		closeChanUsed = true
 	}
-
-	<-closeChan
-	log.Infof("Killing UITest with pid %d ...", pid)
+	log.Infof("Killing WebDriverAgent with pid %d ...", pid)
 	err = pControl.KillProcess(pid)
 	if err != nil {
 		return err
 	}
-	log.Info("WDA killed with success")
-	var signal interface{}
-	closedChan <- signal
+	log.Info("WDA killed successfully")
+
+	if closeChanUsed {
+		var signal interface{}
+		closedChan <- signal
+	}
 	return nil
 }
 
@@ -387,11 +383,12 @@ func RunXCUIWithBundleIdsCtx(
 		return RunXCUIWithBundleIds11Ctx(ctx, bundleID, testRunnerBundleID, xctestConfigFileName, device, wdaargs, wdaenv)
 	}
 
-	conn, err := dtx.NewConnection(device, testmanagerdiOS14)
+	wdaCtx, cancel := context.WithCancel(ctx)
+	conn, err := dtx.NewConnection(device, testmanagerdiOS14, dtx.WithConnectionBreakdownCallback(cancel))
 	if err != nil {
 		return err
 	}
-	return runXUITestWithBundleIdsXcode12Ctx(ctx, bundleID, testRunnerBundleID, xctestConfigFileName, device, conn, wdaargs, wdaenv)
+	return runXUITestWithBundleIdsXcode12Ctx(wdaCtx, bundleID, testRunnerBundleID, xctestConfigFileName, device, conn, wdaargs, wdaenv)
 }
 
 func CloseXCUITestRunner() error {

@@ -25,6 +25,7 @@ type Connection struct {
 	capabilities           map[string]interface{}
 	mutex                  sync.Mutex
 	requestChannelMessages chan Message
+	onConnectionBreakdown  func()
 }
 
 // Dispatcher is a simple interface containing a Dispatch func to receive dtx.Messages
@@ -97,7 +98,7 @@ func notifyOfPublishedCapabilities(msg Message) {
 }
 
 // NewConnection connects and starts reading from a Dtx based service on the device
-func NewConnection(device ios.DeviceEntry, serviceName string) (*Connection, error) {
+func NewConnection(device ios.DeviceEntry, serviceName string, options ...func(*Connection)) (*Connection, error) {
 	conn, err := ios.ConnectToService(device, serviceName)
 	if err != nil {
 		return nil, err
@@ -118,9 +119,20 @@ func NewConnection(device ios.DeviceEntry, serviceName string) (*Connection, err
 		timeout:           5 * time.Second,
 	}
 	dtxConnection.globalChannel = &globalChannel
-	go reader(dtxConnection)
+
+	for _, o := range options {
+		o(dtxConnection)
+	}
+
+	go reader(dtxConnection, dtxConnection.onConnectionBreakdown)
 
 	return dtxConnection, nil
+}
+
+func WithConnectionBreakdownCallback(callback func()) func(*Connection) {
+	return func(c *Connection) {
+		c.onConnectionBreakdown = callback
+	}
 }
 
 // Send sends the byte slice directly to the device using the underlying DeviceConnectionInterface
@@ -129,7 +141,7 @@ func (dtxConn *Connection) Send(message []byte) error {
 }
 
 // reader reads messages from the byte stream and dispatches them to the right channel when they are decoded.
-func reader(dtxConn *Connection) {
+func reader(dtxConn *Connection, onConnectionBreakdown func()) {
 	for {
 		reader := dtxConn.deviceConnection.Reader()
 		msg, err := ReadMessage(reader)
@@ -137,6 +149,9 @@ func reader(dtxConn *Connection) {
 			errText := err.Error()
 			if err == io.EOF || strings.Contains(errText, "use of closed network") {
 				log.Debug("DTX Connection with EOF")
+				if onConnectionBreakdown != nil {
+					onConnectionBreakdown()
+				}
 				return
 			}
 			log.Errorf("error reading dtx connection %+v", err)
