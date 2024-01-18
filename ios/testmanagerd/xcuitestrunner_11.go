@@ -42,7 +42,7 @@ func RunXCUIWithBundleIds11Ctx(
 	ideDaemonProxy2 := newDtxProxyWithConfig(conn2, testConfig)
 	ideDaemonProxy2.ideInterface.testConfig = testConfig
 	// TODO: fixme
-	protocolVersion := uint64(25)
+	protocolVersion := uint64(29)
 	_, err = ideDaemonProxy.daemonConnection.initiateSessionWithIdentifier(testSessionId, protocolVersion)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func RunXCUIWithBundleIds11Ctx(
 	ideInterfaceChannel := ideDaemonProxy.dtxConnection.ForChannelRequest(ProxyDispatcher{id: "emty"})
 
 	log.Debug("start executing testplan")
-	err = ideDaemonProxy2.daemonConnection.startExecutingTestPlanWithProtocolVersion(ideInterfaceChannel, 25)
+	err = ideDaemonProxy2.daemonConnection.startExecutingTestPlanWithProtocolVersion(ideInterfaceChannel, 29)
 	if err != nil {
 		log.Error(err)
 	}
