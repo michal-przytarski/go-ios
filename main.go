@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"sort"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/danielpaulus/go-ios/ios/debugproxy"
 	"github.com/danielpaulus/go-ios/ios/deviceinfo"
 	"github.com/danielpaulus/go-ios/ios/tunnel"
+	"github.com/pbar1/pkill-go"
 
 	"github.com/danielpaulus/go-ios/ios/amfi"
 	"github.com/danielpaulus/go-ios/ios/mobileactivation"
@@ -241,7 +243,6 @@ The commands work as following:
    ios tunnel start [options] [--pair-record-path=<pairrecordpath>]   Creates a tunnel connection to the device. If the device was not paired with the host yet, device pairing will also be executed.
    >           														  On systems with System Integrity Protection enabled the argument '--pair-record-path' is required as we can not access the default path for the pair record
    >                                                                  This command needs to be executed with admin privileges.
-   >                                                                  (On MacOS the process 'remoted' must be paused before starting a tunnel is possible 'sudo pkill -SIGSTOP remoted', and 'sudo pkill -SIGCONT remoted' to resume)
    ios tunnel ls                                                      List currently started tunnels   
    ios devmode (enable | get) [--enable-post-restart] [options]	  Enable developer mode on the device or check if it is enabled. Can also completely finalize developer mode setup after device is restarted.
 
@@ -1982,7 +1983,21 @@ func startTunnel(ctx context.Context, recordsPath string, tunnelInfoPort int) {
 		}
 	}()
 
-	<-ctx.Done()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	select {
+	case <-c:
+	case <-ctx.Done():
+	}
+
+	if runtime.GOOS == "darwin" {
+		_, err := pkill.Pkill("remoted", syscall.SIGCONT)
+		if err != nil {
+			log.Errorf("failed to resume remoted: %v", err)
+		} else {
+			log.Info("resumed remoted")
+		}
+	}
 }
 
 func deviceWithRsdProvider(device ios.DeviceEntry, udid string, address string, rsdPort int) ios.DeviceEntry {
