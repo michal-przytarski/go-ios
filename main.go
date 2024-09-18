@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"sort"
 	"strconv"
@@ -21,6 +22,7 @@ import (
 	"github.com/danielpaulus/go-ios/ios/debugproxy"
 	"github.com/danielpaulus/go-ios/ios/deviceinfo"
 	"github.com/danielpaulus/go-ios/ios/tunnel"
+	"github.com/pbar1/pkill-go"
 
 	"github.com/danielpaulus/go-ios/ios/amfi"
 	"github.com/danielpaulus/go-ios/ios/mobileactivation"
@@ -60,7 +62,7 @@ func main() {
 	Main()
 }
 
-const version = "local-build"
+const version = "v1.0.143-bb"
 
 // Main Exports main for testing
 func Main() {
@@ -2114,6 +2116,15 @@ func startTunnel(ctx context.Context, recordsPath string, tunnelInfoPort int, us
 	}()
 	log.Info("Tunnel server started")
 	<-ctx.Done()
+
+	if runtime.GOOS == "darwin" {
+		_, err := pkill.Pkill("remoted", syscall.SIGCONT)
+		if err != nil {
+			log.Errorf("failed to resume remoted: %v", err)
+		} else {
+			log.Info("resumed remoted")
+		}
+	}
 }
 
 func deviceWithRsdProvider(device ios.DeviceEntry, udid string, address string, rsdPort int) ios.DeviceEntry {

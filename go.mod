@@ -28,6 +28,8 @@ require (
 	software.sslmate.com/src/go-pkcs12 v0.2.0
 )
 
+require github.com/mitchellh/go-ps v1.0.0 // indirect
+
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -38,6 +40,7 @@ require (
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/miekg/dns v1.1.57 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
+	github.com/pbar1/pkill-go v1.0.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
 	github.com/stretchr/objx v0.1.0 // indirect
