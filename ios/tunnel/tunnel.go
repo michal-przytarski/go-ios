@@ -49,7 +49,7 @@ func (t Tunnel) Close() error {
 // ManualPairAndConnectToTunnel tries to verify an existing pairing, and if this fails it triggers a new manual pairing process.
 // After a successful pairing a tunnel for this device gets started and the tunnel information is returned
 func ManualPairAndConnectToTunnel(ctx context.Context, device ios.DeviceEntry, p PairRecordManager) (Tunnel, error) {
-	// log.Info("ManualPairAndConnectToTunnel: starting manual pairing and tunnel connection, dont forget to stop remoted first with 'sudo pkill -SIGSTOP remoted' and run this with sudo.")
+	logrus.Info("ManualPairAndConnectToTunnel: starting manual pairing and tunnel connection, dont forget run this with sudo.")
 	if runtime.GOOS == "darwin" {
 		_, err := pkill.Pkill("remoted", syscall.SIGSTOP)
 		if err != nil {
