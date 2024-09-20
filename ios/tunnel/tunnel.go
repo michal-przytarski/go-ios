@@ -47,6 +47,7 @@ func (t Tunnel) Close() error {
 // ManualPairAndConnectToTunnel tries to verify an existing pairing, and if this fails it triggers a new manual pairing process.
 // After a successful pairing a tunnel for this device gets started and the tunnel information is returned
 func ManualPairAndConnectToTunnel(ctx context.Context, device ios.DeviceEntry, p PairRecordManager) (Tunnel, error) {
+	logrus.Info("ManualPairAndConnectToTunnel: starting manual pairing and tunnel connection, dont forget to run this with sudo.")
 	addr, err := ios.FindDeviceInterfaceAddress(ctx, device)
 	if err != nil {
 		return Tunnel{}, fmt.Errorf("ManualPairAndConnectToTunnel: failed to find device ethernet interface: %w", err)
