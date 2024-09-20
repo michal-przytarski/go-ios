@@ -15,12 +15,11 @@ import (
 	"math/big"
 	"os/exec"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/http"
-	"github.com/pbar1/pkill-go"
+	"github.com/danielpaulus/go-ios/ios/remoted"
 
 	"github.com/quic-go/quic-go"
 	"github.com/sirupsen/logrus"
@@ -50,13 +49,11 @@ func (t Tunnel) Close() error {
 // After a successful pairing a tunnel for this device gets started and the tunnel information is returned
 func ManualPairAndConnectToTunnel(ctx context.Context, device ios.DeviceEntry, p PairRecordManager) (Tunnel, error) {
 	logrus.Info("ManualPairAndConnectToTunnel: starting manual pairing and tunnel connection, dont forget run this with sudo.")
-	if runtime.GOOS == "darwin" {
-		_, err := pkill.Pkill("remoted", syscall.SIGSTOP)
-		if err != nil {
-			return Tunnel{}, fmt.Errorf("ManualPairAndConnectToTunnel: failed to stop remoted: %w", err)
-		} else {
-			logrus.Info("ManualPairAndConnectToTunnel: stopped remoted")
-		}
+	err := remoted.StopRemoted()
+	if err != nil {
+		return Tunnel{}, fmt.Errorf("ManualPairAndConnectToTunnel: failed to stop remoted: %w", err)
+	} else {
+		logrus.Info("ManualPairAndConnectToTunnel: stopped remoted")
 	}
 	addr, err := ios.FindDeviceInterfaceAddress(ctx, device)
 	if err != nil {

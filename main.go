@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"runtime"
 	"runtime/debug"
 	"sort"
 	"strconv"
@@ -21,8 +20,8 @@ import (
 
 	"github.com/danielpaulus/go-ios/ios/debugproxy"
 	"github.com/danielpaulus/go-ios/ios/deviceinfo"
+	"github.com/danielpaulus/go-ios/ios/remoted"
 	"github.com/danielpaulus/go-ios/ios/tunnel"
-	"github.com/pbar1/pkill-go"
 
 	"github.com/danielpaulus/go-ios/ios/amfi"
 	"github.com/danielpaulus/go-ios/ios/mobileactivation"
@@ -2117,13 +2116,11 @@ func startTunnel(ctx context.Context, recordsPath string, tunnelInfoPort int, us
 	log.Info("Tunnel server started")
 	<-ctx.Done()
 
-	if runtime.GOOS == "darwin" {
-		_, err := pkill.Pkill("remoted", syscall.SIGCONT)
-		if err != nil {
-			log.Errorf("failed to resume remoted: %v", err)
-		} else {
-			log.Info("resumed remoted")
-		}
+	err = remoted.ContinueRemoted()
+	if err != nil {
+		log.Errorf("failed to resume remoted: %v", err)
+	} else {
+		log.Info("resumed remoted")
 	}
 }
 
