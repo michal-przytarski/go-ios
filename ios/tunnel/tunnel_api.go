@@ -16,6 +16,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/danielpaulus/go-ios/ios"
+	"github.com/danielpaulus/go-ios/ios/remoted"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -371,7 +372,12 @@ type manualPairingTunnelStart struct {
 }
 
 func (m manualPairingTunnelStart) StartTunnel(ctx context.Context, device ios.DeviceEntry, p PairRecordManager, version *semver.Version, userspaceTUN bool) (Tunnel, error) {
-
+	if version.Major() >= 17 {
+		err := remoted.StopRemoted()
+		if err != nil {
+			return Tunnel{}, fmt.Errorf("manualPairingTunnelStart: failed to stop remoted: %w", err)
+		}
+	}
 	if version.GreaterThan(semver.MustParse("17.4.0")) {
 		if userspaceTUN {
 			tun, err := ConnectUserSpaceTunnelLockdown(device, device.UserspaceTUNPort)

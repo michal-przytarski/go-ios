@@ -20,6 +20,7 @@ import (
 
 	"github.com/danielpaulus/go-ios/ios/debugproxy"
 	"github.com/danielpaulus/go-ios/ios/deviceinfo"
+	"github.com/danielpaulus/go-ios/ios/remoted"
 	"github.com/danielpaulus/go-ios/ios/tunnel"
 
 	"github.com/danielpaulus/go-ios/ios/amfi"
@@ -2291,6 +2292,13 @@ func startTunnel(ctx context.Context, recordsPath string, tunnelInfoPort int, us
 	}()
 	log.Info("Tunnel server started")
 	<-ctx.Done()
+
+	err = remoted.ContinueRemoted()
+	if err != nil {
+		log.Errorf("failed to resume remoted: %v", err)
+	} else {
+		log.Info("resumed remoted")
+	}
 }
 
 func deviceWithRsdProvider(device ios.DeviceEntry, udid string, address string, rsdPort int) ios.DeviceEntry {
